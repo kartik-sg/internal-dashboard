@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+html,
+body {
+  background-color: black;
+  color: white;
+}
+
+#root {
+  background-color: black;
+  min-height: 100vh;
+}
+
+
+@keyframes heartbeat {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+  }
+
+  25% {
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+  }
+
+  50% {
+    transform: scale(0.8);
+    box-shadow: 0 0 3px rgba(0, 255, 0, 0.5);
+  }
+
+  75% {
+    transform: scale(1.1);
+    box-shadow: 0 0 6px rgba(0, 255, 0, 0.7);
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
