@@ -74,7 +74,7 @@ function ClientDetail() {
   const [actionError, setActionError] = useState("");
   const [form, setForm] = useState({
     subscriptionEnds: "",
-    services: { aws: false, azure: false, monitoring: false, backup: false },
+    services: {},
     tiedTo: { awsAccountID: "", azureAccountID: "" },
   });
 
@@ -120,46 +120,66 @@ function ClientDetail() {
     const tied = (() => {
       if (!clientData.tiedTo) return { awsAccountID: "", azureAccountID: "" };
       if (Array.isArray(clientData.tiedTo)) {
-        const aws = clientData.tiedTo.find((t) => t.awsAccountID)?.awsAccountID || "";
-        const azure = clientData.tiedTo.find((t) => t.azureAccountID)?.azureAccountID || "";
+        const aws =
+          clientData.tiedTo.find((t) => t.awsAccountID)?.awsAccountID || "";
+        const azure =
+          clientData.tiedTo.find((t) => t.azureAccountID)?.azureAccountID || "";
         return { awsAccountID: aws, azureAccountID: azure };
       }
       return {
-        awsAccountID: clientData.tiedTo.awsAccountID || clientData.tiedTo.aws || "",
-        azureAccountID: clientData.tiedTo.azureAccountID || clientData.tiedTo.azure || "",
+        awsAccountID:
+          clientData.tiedTo.awsAccountID || clientData.tiedTo.aws || "",
+        azureAccountID:
+          clientData.tiedTo.azureAccountID || clientData.tiedTo.azure || "",
       };
     })();
+
     setForm({
       subscriptionEnds: isoToLocalInput(clientData.subscriptionEnds),
-      services: {
-        aws: !!services.aws,
-        azure: !!services.azure,
-        monitoring: !!services.monitoring,
-        backup: typeof services.backup === "boolean" ? services.backup : false,
-      },
+      services: { ...services }, // Copy all services as-is
       tiedTo: tied,
     });
   };
 
-  // Service badges with better styling
+  // Helper function to format service name for display
+  const formatServiceName = (serviceName) => {
+    return serviceName
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  // Helper function to get service display value
+  const getServiceDisplayValue = (value) => {
+    if (typeof value === "boolean") {
+      return value ? "Active" : "Inactive";
+    }
+    if (typeof value === "number") {
+      return `Limit: ${value}`;
+    }
+    return String(value);
+  };
+
+  // Helper function to get badge variant based on service value
+  const getServiceBadgeVariant = (value) => {
+    if (typeof value === "boolean") {
+      return value ? "success" : "default";
+    }
+    if (typeof value === "number") {
+      return value > 0 ? "success" : "warning";
+    }
+    return "default";
+  };
+
+  // Service badges with dynamic values
   const serviceBadges = useMemo(() => {
     const services = client?.services || {};
     return (
       <div className="flex flex-wrap gap-2">
-        <Badge variant={services.aws ? "success" : "default"}>
-          AWS: {services.aws ? "Active" : "Inactive"}
-        </Badge>
-        <Badge variant={services.azure ? "success" : "default"}>
-          Azure: {services.azure ? "Active" : "Inactive"}
-        </Badge>
-        <Badge variant={services.monitoring ? "success" : "default"}>
-          Monitoring: {services.monitoring ? "Active" : "Inactive"}
-        </Badge>
-        {typeof services.backup === "boolean" && (
-          <Badge variant={services.backup ? "success" : "default"}>
-            Backup: {services.backup ? "Active" : "Inactive"}
+        {Object.entries(services).map(([serviceName, value]) => (
+          <Badge key={serviceName} variant={getServiceBadgeVariant(value)}>
+            {formatServiceName(serviceName)}: {getServiceDisplayValue(value)}
           </Badge>
-        )}
+        ))}
       </div>
     );
   }, [client]);
@@ -211,9 +231,6 @@ function ClientDetail() {
     }));
   };
 
-  const addTiedTo = () => {};
-  const removeTiedTo = () => {};
-
   const startEditing = () => {
     setIsEditing(true);
     setActionError("");
@@ -238,8 +255,13 @@ function ClientDetail() {
           : null,
         services: { ...form.services },
         tiedTo: {
-          ...(form.tiedTo.awsAccountID && { awsAccountID: form.tiedTo.awsAccountID }),
-          ...(form.tiedTo.azureAccountID && { azureAccountID: form.tiedTo.azureAccountID, azure: form.tiedTo.azureAccountID }),
+          ...(form.tiedTo.awsAccountID && {
+            awsAccountID: form.tiedTo.awsAccountID,
+          }),
+          ...(form.tiedTo.azureAccountID && {
+            azureAccountID: form.tiedTo.azureAccountID,
+            azure: form.tiedTo.azureAccountID,
+          }),
         },
       };
 
@@ -475,7 +497,11 @@ function ClientDetail() {
                           {(() => {
                             const t = client.tiedTo;
                             if (!t) return "-";
-                            if (Array.isArray(t)) return t.find((x) => x.awsAccountID)?.awsAccountID || "-";
+                            if (Array.isArray(t))
+                              return (
+                                t.find((x) => x.awsAccountID)?.awsAccountID ||
+                                "-"
+                              );
                             return t.awsAccountID || t.aws || "-";
                           })()}
                         </span>
@@ -486,7 +512,11 @@ function ClientDetail() {
                           {(() => {
                             const t = client.tiedTo;
                             if (!t) return "-";
-                            if (Array.isArray(t)) return t.find((x) => x.azureAccountID)?.azureAccountID || "-";
+                            if (Array.isArray(t))
+                              return (
+                                t.find((x) => x.azureAccountID)
+                                  ?.azureAccountID || "-"
+                              );
                             return t.azureAccountID || t.azure || "-";
                           })()}
                         </span>
@@ -521,24 +551,67 @@ function ClientDetail() {
                 <label className="text-gray-300 text-sm font-medium">
                   Services
                 </label>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(form.services).map(([service, enabled]) => (
-                    <label
-                      key={service}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700 hover:border-gray-600 transition-colors cursor-pointer"
+                <div className="space-y-3">
+                  {Object.entries(form.services).map(([serviceName, value]) => (
+                    <div
+                      key={serviceName}
+                      className="p-4 bg-gray-800/30 border border-gray-700 rounded-lg"
                     >
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        onChange={(e) =>
-                          updateService(service, e.target.checked)
-                        }
-                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-200 capitalize">
-                        {service}
-                      </span>
-                    </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-gray-200 font-medium">
+                          {formatServiceName(serviceName)}
+                        </span>
+                        <Badge variant={getServiceBadgeVariant(value)}>
+                          {getServiceDisplayValue(value)}
+                        </Badge>
+                      </div>
+
+                      {typeof value === "boolean" ? (
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={value}
+                            onChange={(e) =>
+                              updateService(serviceName, e.target.checked)
+                            }
+                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-gray-300 text-sm">
+                            Enable {formatServiceName(serviceName)}
+                          </span>
+                        </label>
+                      ) : typeof value === "number" ? (
+                        <div className="space-y-2">
+                          <label className="text-gray-300 text-sm">
+                            Limit Value
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={value}
+                            onChange={(e) =>
+                              updateService(
+                                serviceName,
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-full px-3 py-2 rounded-md bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="text-gray-300 text-sm">Value</label>
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) =>
+                              updateService(serviceName, e.target.value)
+                            }
+                            className="w-full px-3 py-2 rounded-md bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -555,13 +628,17 @@ function ClientDetail() {
                       <input
                         placeholder="AWS Account ID"
                         value={form.tiedTo.awsAccountID}
-                        onChange={(e) => updateTiedTo("awsAccountID", e.target.value)}
+                        onChange={(e) =>
+                          updateTiedTo("awsAccountID", e.target.value)
+                        }
                         className="px-3 py-2 rounded-md bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                       <input
                         placeholder="Azure Account ID"
                         value={form.tiedTo.azureAccountID}
-                        onChange={(e) => updateTiedTo("azureAccountID", e.target.value)}
+                        onChange={(e) =>
+                          updateTiedTo("azureAccountID", e.target.value)
+                        }
                         className="px-3 py-2 rounded-md bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     </div>

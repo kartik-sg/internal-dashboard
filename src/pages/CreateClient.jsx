@@ -10,9 +10,12 @@ function CreateClient() {
   });
 
   const [services, setServices] = useState({
-    serviceA: false,
-    serviceB: false,
-    serviceC: false,
+    github_repo_scans: false,
+    s3_scans: false,
+    iam_roles_scans: false,
+    slack_alerts: false,
+    s3_scans_limit: 0,
+    github_repo_scans_limit: 0,
   });
 
   const [tiedAccounts, setTiedAccounts] = useState({
@@ -122,6 +125,13 @@ function CreateClient() {
     }));
   };
 
+  const handleServiceLimitChange = (field, value) => {
+    setServices((prev) => ({
+      ...prev,
+      [field]: Math.max(0, Number(value) || 0),
+    }));
+  };
+
   const handleAccountToggle = (accountType) => {
     setTiedAccounts((prev) => ({
       ...prev,
@@ -220,9 +230,12 @@ function CreateClient() {
       subscriptionEnds: "",
     });
     setServices({
-      serviceA: false,
-      serviceB: false,
-      serviceC: false,
+      github_repo_scans: false,
+      s3_scans: false,
+      iam_roles_scans: false,
+      slack_alerts: false,
+      s3_scans_limit: 0,
+      github_repo_scans_limit: 0,
     });
     setTiedAccounts({
       aws: { enabled: false, accountId: "" },
@@ -556,39 +569,83 @@ function CreateClient() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(services).map(([service, enabled]) => (
-                <div
-                  key={service}
-                  className={`relative p-6 rounded-xl border-2 transition-all duration-300 cursor-pointer group ${
-                    enabled
-                      ? "border-gray-400 bg-gray-800"
-                      : "border-gray-600 bg-gray-850 hover:border-gray-500"
-                  }`}
-                  onClick={() => handleServiceToggle(service)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white capitalize">
-                        {service}
-                      </h3>
-                      <p className="text-sm text-gray-400">
-                        {enabled ? "Service enabled" : "Service disabled"}
-                      </p>
-                    </div>
-                    <div
-                      className={`w-12 h-6 rounded-full transition-colors duration-200 ${
-                        enabled ? "bg-gray-500" : "bg-gray-600"
-                      }`}
-                    >
+              {Object.entries(services)
+                .filter(([, value]) => typeof value === "boolean")
+                .map(([service, enabled]) => (
+                  <div
+                    key={service}
+                    className={`relative p-6 rounded-xl border-2 transition-all duration-300 cursor-pointer group ${
+                      enabled
+                        ? "border-gray-400 bg-gray-800"
+                        : "border-gray-600 bg-gray-850 hover:border-gray-500"
+                    }`}
+                    onClick={() => handleServiceToggle(service)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white capitalize">
+                          {service}
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          {enabled ? "Service enabled" : "Service disabled"}
+                        </p>
+                      </div>
                       <div
-                        className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 ${
-                          enabled ? "translate-x-6 ml-1" : "translate-x-1"
+                        className={`w-12 h-6 rounded-full transition-colors duration-200 ${
+                          enabled ? "bg-gray-500" : "bg-gray-600"
                         }`}
-                      ></div>
+                      >
+                        <div
+                          className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 ${
+                            enabled ? "translate-x-6 ml-1" : "translate-x-1"
+                          }`}
+                        ></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  S3 Scans Limit
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={services.s3_scans_limit}
+                  onChange={(e) =>
+                    handleServiceLimitChange("s3_scans_limit", e.target.value)
+                  }
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-400">
+                  Max S3 resources per client
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  GitHub Repo Scans Limit
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={services.github_repo_scans_limit}
+                  onChange={(e) =>
+                    handleServiceLimitChange(
+                      "github_repo_scans_limit",
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-400">
+                  Max GitHub repos per client
+                </p>
+              </div>
             </div>
           </div>
 
